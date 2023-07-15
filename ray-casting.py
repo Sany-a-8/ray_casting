@@ -8,7 +8,7 @@ FOV = math.pi / 3  # Field of view
 HALF_WIDTH = WIDTH // 2
 HALF_HEIGHT = HEIGHT // 2
 
-# Map representation (1 represents wall, 0 represents empty space)
+# Map representation (1 represents wall, 0 represents empty space, 2 represents the winning space)
 MAP = [
     [1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 1],
@@ -16,7 +16,7 @@ MAP = [
     [1, 0, 1, 0, 0, 0, 0, 1],
     [1, 0, 1, 0, 1, 1, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1, 1, 2, 1]
 ]
 
 # Player settings
@@ -30,6 +30,7 @@ player_speed = 0.1
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
+font = pygame.font.SysFont(None, 48)
 
 # Color gradient for different depths
 SHADES_OF_BLUE = [
@@ -39,6 +40,11 @@ SHADES_OF_BLUE = [
     (0, 0, 224),
     (0, 0, 255)
 ]
+WINNING_COLOR = (0, 255, 0)
+TRANSPARENT = (0, 0, 0, 0)  # Transparent color
+
+# Game state
+game_over = False
 
 # Game loop
 running = True
@@ -47,52 +53,45 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # Player movement
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
-        player_angle -= 0.1
-    if keys[pygame.K_RIGHT]:
-        player_angle += 0.1
-    if keys[pygame.K_UP]:
-        new_player_x = player_x + math.sin(player_angle) * player_speed
-        new_player_y = player_y + math.cos(player_angle) * player_speed
+    if not game_over:
+        # Player movement
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player_angle -= 0.1
+        if keys[pygame.K_RIGHT]:
+            player_angle += 0.1
+        if keys[pygame.K_UP]:
+            new_player_x = player_x + math.sin(player_angle) * player_speed
+            new_player_y = player_y + math.cos(player_angle) * player_speed
 
-        # Check collision with walls
-        if MAP[int(new_player_y)][int(new_player_x)] == 0:
-            player_x = new_player_x
-            player_y = new_player_y
-        else:
-            # Slide along the wall
-            for i in range(10):
-                temp_x = player_x + math.sin(player_angle) * player_speed * i / 10
-                temp_y = player_y + math.cos(player_angle) * player_speed * i / 10
-                if MAP[int(temp_y)][int(temp_x)] == 0:
-                    player_x = temp_x
-                    player_y = temp_y
-                    break
+            # Check collision with walls and winning space
+            if (
+                MAP[int(new_player_y)][int(new_player_x)] == 0
+                or MAP[int(new_player_y)][int(new_player_x)] == 2
+            ):
+                player_x = new_player_x
+                player_y = new_player_y
 
-    if keys[pygame.K_DOWN]:
-        new_player_x = player_x - math.sin(player_angle) * player_speed
-        new_player_y = player_y - math.cos(player_angle) * player_speed
+        if keys[pygame.K_DOWN]:
+            new_player_x = player_x - math.sin(player_angle) * player_speed
+            new_player_y = player_y - math.cos(player_angle) * player_speed
 
-        # Check collision with walls
-        if MAP[int(new_player_y)][int(new_player_x)] == 0:
-            player_x = new_player_x
-            player_y = new_player_y
-        else:
-            # Slide along the wall
-            for i in range(10):
-                temp_x = player_x - math.sin(player_angle) * player_speed * i / 10
-                temp_y = player_y - math.cos(player_angle) * player_speed * i / 10
-                if MAP[int(temp_y)][int(temp_x)] == 0:
-                    player_x = temp_x
-                    player_y = temp_y
-                    break
+            # Check collision with walls and winning space
+            if (
+                MAP[int(new_player_y)][int(new_player_x)] == 0
+                or MAP[int(new_player_y)][int(new_player_x)] == 2
+            ):
+                player_x = new_player_x
+                player_y = new_player_y
+
+        # Check if the player reaches the winning space
+        if MAP[int(player_y)][int(player_x)] == 2:
+            game_over = True
 
     # Clear the screen
     screen.fill((0, 0, 0))
 
-    # Ray casting
+    # Draw the walls
     for x in range(WIDTH):
         ray_angle = (player_angle - FOV / 2) + (x / WIDTH) * FOV
         distance_to_wall = 0
@@ -121,11 +120,22 @@ while running:
         ceiling = HALF_HEIGHT - int(HEIGHT / distance_to_wall) // 2
         floor = HEIGHT - ceiling
 
-        # Draw the walls
         pygame.draw.line(screen, wall_color, (x, ceiling), (x, floor))
 
-    # Draw the player
-    pygame.draw.circle(screen, (255, 0, 0), (int(player_x * 50), int(player_y * 50)), player_radius)
+    # Draw the winning space as a transparent rectangle
+    for y in range(len(MAP)):
+        for x in range(len(MAP[0])):
+            if MAP[y][x] == 2:
+                pygame.draw.rect(screen, TRANSPARENT, (x * 50, y * 50, 50, 50))
+
+    # Draw the player as a transparent circle
+    pygame.draw.circle(screen, TRANSPARENT, (int(player_x * 50), int(player_y * 50)), player_radius)
+
+    # Display the winning message
+    if game_over:
+        text = font.render("YOU WIN!", True, (255, 255, 255))
+        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(text, text_rect)
 
     # Update the display
     pygame.display.flip()
