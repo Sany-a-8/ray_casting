@@ -46,6 +46,12 @@ TRANSPARENT = (0, 0, 0, 0)  # Transparent color
 # Game state
 game_over = False
 
+# Key settings
+key_x = 6.0
+key_y = 1.0
+key_radius = 10
+has_key = False
+
 # Game loop
 running = True
 while running:
@@ -64,28 +70,36 @@ while running:
             new_player_x = player_x + math.sin(player_angle) * player_speed
             new_player_y = player_y + math.cos(player_angle) * player_speed
 
-            # Check collision with walls and winning space
+            # Check collision with walls, key, and winning space
             if (
                 MAP[int(new_player_y)][int(new_player_x)] == 0
-                or MAP[int(new_player_y)][int(new_player_x)] == 2
+                or (MAP[int(new_player_y)][int(new_player_x)] == 2 and has_key)
             ):
                 player_x = new_player_x
                 player_y = new_player_y
+
+            # Check if the player picks up the key
+            if (
+                int(new_player_x) == int(key_x) and
+                int(new_player_y) == int(key_y) and
+                not has_key
+            ):
+                has_key = True
 
         if keys[pygame.K_DOWN]:
             new_player_x = player_x - math.sin(player_angle) * player_speed
             new_player_y = player_y - math.cos(player_angle) * player_speed
 
-            # Check collision with walls and winning space
+            # Check collision with walls, key, and winning space
             if (
                 MAP[int(new_player_y)][int(new_player_x)] == 0
-                or MAP[int(new_player_y)][int(new_player_x)] == 2
+                or (MAP[int(new_player_y)][int(new_player_x)] == 2 and has_key)
             ):
                 player_x = new_player_x
                 player_y = new_player_y
 
-        # Check if the player reaches the winning space
-        if MAP[int(player_y)][int(player_x)] == 2:
+        # Check if the player reaches the winning space with the key
+        if MAP[int(player_y)][int(player_x)] == 2 and has_key:
             game_over = True
 
     # Clear the screen
@@ -121,6 +135,12 @@ while running:
         floor = HEIGHT - ceiling
 
         pygame.draw.line(screen, wall_color, (x, ceiling), (x, floor))
+
+    # Draw the key as a circle on the floor if the player hasn't picked it up yet
+    if not has_key:
+        key_screen_x = int(key_x * 50)
+        key_screen_y = int(key_y * 50)
+        pygame.draw.circle(screen, (255, 255, 0), (key_screen_x, key_screen_y), key_radius)
 
     # Draw the winning space as a transparent rectangle
     for y in range(len(MAP)):
